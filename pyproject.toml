@@ -8,4 +8,5 @@ license = { text = "MIT" }
 
 dependencies = [
     "fastapi>=0.128.0",
+    "langchain>=1.2.6",
 ]
