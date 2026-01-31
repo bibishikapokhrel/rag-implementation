@@ -42,7 +42,31 @@ This project is a web app that implements the **RAG (Retrieval-Augmented Generat
       git clone https://github.com/bibishikapokhrel/rag-implementation.git
       cd rag-implementation
 
-##### 2. Set up the project environment and dependencies
+##### 2. Create a virtual environment
+
+**macOS/Linux:**
+```bash
+python3 -m venv .venv
+```
+
+**Windows:**
+```bash
+python -m venv .venv
+```
+
+##### 3. Activate the virtual environment
+
+**macOS/Linux:**
+```bash
+source .venv/bin/activate
+```
+
+**Windows:**
+```bash
+.venv\Scripts\activate
+```
+
+##### 4. Set up the project environment and dependencies
       uv sync
 
 
@@ -52,8 +76,17 @@ ii.Installs all project dependencies listed in uv.lock.
       
 iii.Ensures all required packages are installed with the exact versions — no need to install any other libraries manually.
 
- ##### 3. Optional
- If uv is not installed, first run:
+##### 5. Set up the infrastructure (Qdrant vector database)
+
+Run the following command to start the required services using Docker:
+```bash
+docker compose up -d
+```
+
+This command starts the Qdrant vector database in detached mode, making it available at http://localhost:6333.
+
+##### 6. Optional
+If uv is not installed, first run:
       
       pip install uv
 
@@ -88,7 +121,7 @@ You need to run the backend and frontend in **two separate terminals**.
 
 1.**Run the FastAPI backend** in first terminal
     
-    uvicorn app.backend.main:app --reload
+    uv run uvicorn app.main:app --reload
 
 This starts the backend server at
  http://localhost:8000.
@@ -100,7 +133,7 @@ http://127.0.0.1:8000/docs
    
 2.**Run the Streamlit frontend** in second terminal
       
-    streamlit run app/streamlit/streamlit.py
+    streamlit run app/streamlit.py
 
 Once the app starts, Streamlit will generate a local URL (usually http://localhost:8501).
 
