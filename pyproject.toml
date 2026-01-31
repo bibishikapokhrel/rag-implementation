@@ -1,0 +1,23 @@
+[project]
+name = "rag-implementation"
+version = "0.1.0"
+description = "Short description."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+dependencies = [
+    "fastapi>=0.128.0",
+    "fitz>=0.0.1.dev2",
+    "google-genai>=1.60.0",
+    "google-generativeai>=0.8.6",
+    "langchain>=1.2.6",
+    "langchain-text-splitters>=1.1.0",
+    "pdfplumber>=0.11.9",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.22",
+    "qdrant-client>=1.16.2",
+    "sentence-transformers>=5.2.1",
+    "streamlit>=1.53.1",
+    "uvicorn>=0.40.0",
+]
