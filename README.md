@@ -70,11 +70,10 @@ source .venv/bin/activate
       uv sync
 
 
-i.Automatically creates a .venv virtual environment if it doesn’t exist.
 
-ii.Installs all project dependencies listed in uv.lock.
+i.Installs all project dependencies listed in uv.lock.
       
-iii.Ensures all required packages are installed with the exact versions — no need to install any other libraries manually.
+ii.Ensures all required packages are installed with the exact versions — no need to install any other libraries manually.
 
 ##### 5. Set up the infrastructure (Qdrant vector database)
 
