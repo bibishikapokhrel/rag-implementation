@@ -5,7 +5,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.http import models as rest
-
+from sentence_transformers import SparseEncoder
 from dotenv import load_dotenv
 import os
 
@@ -17,15 +17,21 @@ class IngestionServicePipeline:
 
         self.text_splitter=RecursiveCharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
         
-        self.embedding=SentenceTransformer("all-MiniLM-L6-v2")
+        self.dense_embedding=SentenceTransformer("all-MiniLM-L6-v2")
         
+        self.sparse_embedding=SparseEncoder("prithivida/Splade_PP_en_v2")
         self.qdrant_client= QdrantClient(
                             url=os.getenv("Qdrant_url"),
                             prefer_grpc=False )
         
         self.qdrant_client.recreate_collection(
             collection_name=os.getenv("collection_name"),
-            vectors_config=rest.VectorParams(size=384, distance=rest.Distance.COSINE)
+            vectors_config={
+                "dense":rest.VectorParams(size=384, distance=rest.Distance.COSINE)
+            },
+            sparse_vectors_config={
+                "splade":rest.SparseVectorParams()
+            }
         )
     def read_pdf(self)->str:
          self.all_text=""
@@ -39,19 +45,23 @@ class IngestionServicePipeline:
         return chunks
     
     def embed_chunks(self,chunk):
-        embedding_of_chunk=self.embedding.encode(chunk)
-        return embedding_of_chunk
+        embedding_of_dense=self.dense_embedding.encode(chunk)
+        embedding_of_sparse=self.sparse_embedding.encode(chunk)
+        return embedding_of_dense,embedding_of_sparse
 
 
-    def upsert_points(self,index,embedding,chunk):
+    def upsert_points(self,index,dense_embedding,chunk,indices,values):
         self.qdrant_client.upsert(
         collection_name=os.getenv("collection_name"),
         points=[
         rest.PointStruct(
             id=index,
-            vector=(embedding).tolist(),
+            vector={
+                "dense":dense_embedding.tolist(),
+                "splade":rest.SparseVector(indices=indices,
+                                               values=values)
+                 },
             payload={"text":chunk}
-
         )
         ]
         ) 
@@ -60,5 +70,8 @@ class IngestionServicePipeline:
         texts=self.read_pdf()
         chunks=self.chunking(texts)
         for index,chunk in enumerate(chunks):
-            vectors=self.embed_chunks(chunk)
-            self.upsert_points(index,vectors,chunk)
+            dense_vectors,sparse_vector=self.embed_chunks(chunk)
+            sparse_vector = sparse_vector.coalesce()
+            sparse_indices = sparse_vector.indices()[0].tolist()
+            sparse_values = sparse_vector.values().tolist()
+            self.upsert_points(index,dense_vectors,chunk,sparse_indices,sparse_values)
