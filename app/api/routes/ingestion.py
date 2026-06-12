@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, Form, UploadFile, File
+from fastapi import APIRouter, Depends, Form, UploadFile, File, HTTPException
 
 from app.core.services.auth import get_current_user
 from app.core.services.ingest import IngestionServicePipeline
@@ -29,17 +29,20 @@ async def ingest_file(
     content = await file.read()
     ext = (file.filename or "file").rsplit(".", 1)[-1].lower()
 
+    if ext not in CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
+
     # 1. Save temp file for ingestion pipeline
     temp_path = f"temp_{uuid.uuid4()}_{file.filename}"
     with open(temp_path, "wb") as f:
         f.write(content)
 
+    object_key = f"{user.id}/{uuid.uuid4()}/{file.filename}"
     try:
         # 2. Ingest into Qdrant
         IngestionServicePipeline(temp_path).ingest_document()
 
         # 3. Upload original file to MinIO
-        object_key = f"{user.id}/{uuid.uuid4()}/{file.filename}"
         minio_client.upload(object_key, content, CONTENT_TYPES.get(ext, "application/octet-stream"))
 
     finally:

@@ -30,6 +30,8 @@ def update_conversation(conv_id:int,req:ConversationUpdate,user=Depends(get_curr
     return ConversationResponse(id=conv.id,title=conv.title,created_at=str(conv.created_at))
 
 @router.get("/{conv_id}/messages")
-def get_messages(conv_id:int,db=Depends(get_db)):
+def get_messages(conv_id:int,user=Depends(get_current_user),db=Depends(get_db)):
+    if db.query(Conversation).filter(Conversation.id==conv_id,Conversation.user_id==user.id).first() is None:
+        raise HTTPException(status_code=404,detail="Conversation not found")
     msgs=db.query(Message).filter(Message.conversation_id==conv_id).all()
     return [MessageResponse(id=m.id,user_message=m.user_message,ai_reply=m.ai_reply) for m in msgs]
