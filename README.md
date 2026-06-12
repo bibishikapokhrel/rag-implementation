@@ -1,139 +1,140 @@
-# Rag-Implementation
+# RAG Implementation
 
 ## Overview
-This project is a web app that allows users to upload PDF files and search their content using AI.
-
+A full-stack web application that lets authenticated users upload documents, manage conversations, and query their content using AI-powered Retrieval-Augmented Generation (RAG).
 
 ## About
-This project is a web app that implements the **RAG (Retrieval-Augmented Generation)** concept,allowing users to upload documents,ask queries and search their content using **LLM (Large Language Model)**.
+This project implements the **RAG (Retrieval-Augmented Generation)** pattern with a complete user management system. Users sign up, log in, upload documents (PDF, TXT, DOCX), and chat with an LLM that retrieves relevant context from their uploaded files.
 
+**Problem it solves:** Searching through large documents is time-consuming. This app lets you upload files and ask natural language questions — the RAG pipeline finds relevant passages and the LLM generates accurate, context-grounded answers.
 
-**Problem it solves :** Going through huge PDFs or text files to find answers can be time-consuming and frustrating.  
-   With this app, you can simply upload your documents and ask questions AI quickly finds the relevant information for you. The app uses **RAG** to give you answers that actually understand the context
-
-##  Features
-- Uploads PDF documents
-- Semantic search using embeddings
-- Context-aware answer generation  using LLM
-- Fast document retrieval using Qdrant vector database
-- Interactive chat-like interface using Streamlit
-- API-based backend using FastAPI
+## Features
+- User authentication (signup / login) with JWT
+- PDF, TXT, and DOCX document upload
+- Document storage in MinIO (S3-compatible object storage)
+- Semantic search using dense embeddings (Qdrant vector database)
+- Conversation and message history persisted in PostgreSQL
+- Context-aware answer generation using Gemini Flash LLM
+- React + Vite frontend with sidebar, chat area, and document viewer
+- FastAPI backend with protected routes
 
 ## Architecture / Workflow
 
-1. User uploads a PDF document via the **Streamlit frontend**.
-2. The frontend sends the PDF to the **FastAPI backend**, which orchestrates the processing pipeline.
-3. The **RAG pipeline** extracts text from the PDF(using pdfplumber) and splits it into manageable chunks(using langchain text splitter).
-4. Sentence Transformers generate embeddings for each text chunk.
-5. Embeddings are stored in the **Qdrant vector database** for efficient semantic retrieval.
-6. User submits a query through the frontend.
-7. The backend pipeline retrieves relevant chunks from Qdrant based on the query.
-8. Gemini 3 Flash Preview LLM processes the retrieved chunks and generates a context-aware answer.
-9. The backend sends the final answer back to the **Streamlit frontend**, where it is displayed to the user in a chat-like interface.
+1. User signs up or logs in via the **React frontend** — a JWT token is issued.
+2. User uploads a document; the **FastAPI backend**:
+   - Runs the **ingestion pipeline**: extracts text, splits into chunks, generates embeddings, stores them in **Qdrant**.
+   - Uploads the original file to **MinIO** and records document metadata in **PostgreSQL**.
+3. User creates a conversation and submits a query.
+4. The backend retrieves relevant chunks from Qdrant, sends them with the query to **Gemini Flash**, and saves the message + AI reply to PostgreSQL.
+5. The frontend displays the response and maintains conversation history via the API.
 
-![alt text](screenshots/ingestion.png)
+![Login](screenshots/login.png)
 
-![alt text](screenshots/chat.png)
+![Chat](screenshots/chat.png)
 
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React + Vite |
+| Backend | FastAPI |
+| Vector DB | Qdrant |
+| Relational DB | PostgreSQL (SQLAlchemy ORM) |
+| Object Storage | MinIO |
+| Embeddings | Sentence Transformers |
+| LLM | Gemini Flash |
+| Auth | JWT + bcrypt |
+| Infrastructure | Docker Compose |
 
 ## Installation
 
-##### 1. Clone this repository
-      git clone https://github.com/bibishikapokhrel/rag-implementation.git
-      cd rag-implementation
-
-##### 2. Create a virtual environment
-
-**macOS/Linux:**
+##### 1. Clone the repository
 ```bash
-python3 -m venv .venv
+git clone https://github.com/bibishikapokhrel/rag-implementation.git
+cd rag-implementation
 ```
 
-**Windows:**
+##### 2. Configure environment variables
+
+Copy the example and fill in your values:
 ```bash
-python -m venv .venv
+cp .env.example .env
 ```
 
-##### 3. Activate the virtual environment
+Required variables:
+```
+Qdrant_url=http://localhost:6333
+collection_name=your-collection-name
+api_key=your-gemini-api-key
+JWT_SECRET_KEY=your-secret-key
 
-**macOS/Linux:**
-```bash
-source .venv/bin/activate
+# MinIO
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=documents
 ```
 
-**Windows:**
-```bash
-.venv\Scripts\activate
-```
+##### 3. Start infrastructure services
 
-##### 4. Set up the project environment and dependencies
-      uv sync
-
-
-
-i.Installs all project dependencies listed in uv.lock.
-      
-ii.Ensures all required packages are installed with the exact versions — no need to install any other libraries manually.
-
-##### 5. Set up the infrastructure (Qdrant vector database)
-
-Run the following command to start the required services using Docker:
 ```bash
 docker compose up -d
 ```
 
-This command starts the Qdrant vector database in detached mode, making it available at http://localhost:6333.
+This starts:
+- **Qdrant** — vector database at http://localhost:6333
+- **PostgreSQL** — relational database at localhost:5432
+- **pgAdmin** — database UI at http://localhost:5050 (admin@admin.com / admin)
+- **MinIO** — object storage API at http://localhost:9000, console at http://localhost:9001
 
-##### 6. Optional
-If uv is not installed, first run:
-      
-      pip install uv
+##### 4. Install Python dependencies
 
+```bash
+uv sync
+```
 
+If `uv` is not installed:
+```bash
+pip install uv
+uv sync
+```
 
-## Technologies Used
+##### 5. Install frontend dependencies
 
-#### 1.Backend – FastAPI
+```bash
+cd frontend
+npm install
+```
 
-FastAPI is used to build the backend API that manages document ingestion and query requests. It connects the frontend with the RAG pipeline
+## Running the Application
 
-### 2.Frontend – Streamlit
+You need three terminals.
 
-Streamlit is used to create the user interface where users can upload PDFs, ask questions, and view AI-generated responses in a chat-like format.
+**Terminal 1 — FastAPI backend:**
+```bash
+uv run uvicorn app.main:app --reload
+```
+Backend runs at http://localhost:8000. API docs at http://localhost:8000/docs.
 
-### 3.Vector Database – Qdrant
+**Terminal 2 — React frontend:**
+```bash
+cd frontend
+npm run dev
+```
+Frontend runs at http://localhost:5173.
 
-Qdrant is used to store document embeddings and perform fast similarity search.
+## API Endpoints
 
-### 4.Embeddings – Sentence Transformers
-
-Sentence Transformers are used to convert text chunks into numerical vector representations (embeddings).
-
-### 5.LLM-Gemini-3-flash-preview
-Gemini 3 Flash Preview is the Large Language Model used in this project to generate context-aware answers from uploaded documents.
-
-### 6. Docker 
-Docker is used to containerize the application environment and services, making the project easier to run, deploy, and reproduce across different systems.
-
-## Executing program
-You need to run the backend and frontend in **two separate terminals**.
-
-1.**Run the FastAPI backend** in first terminal
-    
-    uv run uvicorn app.main:app --reload
-
-This starts the backend server at
- http://localhost:8000.
-
-API documentation is available at:
-http://127.0.0.1:8000/docs
- 
- This allows you to test API endpoints directly from your browser
-   
-2.**Run the Streamlit frontend** in second terminal
-      
-    streamlit run app/streamlit.py
-
-Once the app starts, Streamlit will generate a local URL (usually http://localhost:8501).
-
-Open this URL in your browser to view and use the frontend.
+| Method | Path | Description |
+|---|---|---|
+| POST | `/auth/signup` | Register a new user |
+| POST | `/auth/login` | Login, returns JWT |
+| POST | `/ingest/ingest/` | Upload and ingest a document (auth required) |
+| POST | `/chat/chat` | Send a query, get AI response (auth required) |
+| GET | `/conversations/` | List user conversations (auth required) |
+| POST | `/conversations/` | Create a conversation (auth required) |
+| PATCH | `/conversations/{id}` | Rename a conversation (auth required) |
+| GET | `/conversations/{id}/messages` | Get message history |
+| GET | `/documents/` | List user documents (auth required) |
+| GET | `/documents/{id}/url` | Get a presigned download URL (auth required) |
+| DELETE | `/documents/{id}` | Delete a document (auth required) |
